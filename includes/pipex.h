@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   pipex.h                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
+/*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/01/26 14:52:00 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2023/03/21 18:56:50 by lsohler@stu      ###   ########.fr       */
+/*   Updated: 2023/04/28 14:06:14 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,14 +32,15 @@ typedef	struct	s_list
 	char			*outfile;
 	char			**cmd;
 	char			*path;
-	int				*fd[2];
+	int				fd[2];
 	pid_t			pid;
 	struct	s_list	*next;
+	struct	s_list	*prev;
 }				px_list;
 
 typedef	struct	t_list
 {
-	int				**fd;
+	int				*fd;
 	int				infile;
 	int				outfile;
 	pid_t			pid;
@@ -55,8 +56,10 @@ px_list	*pipex_lstnew(int ac, char **av, int i, char **envp);
 px_list	*pipex_parse(int ac, char **av, char **envp);
 void	free_pipex_struct(px_list **list);
 void 	free_split(char **array);
-int		open_files(int ac, char **av, f_list files);
+int		open_files(int ac, char **av, f_list **files);
 int		error_msg(char *msg);
+void	pipex_child(px_list *child, f_list *file, char **envp);
+
 
 
 

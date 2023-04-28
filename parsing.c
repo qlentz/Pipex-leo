@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   parsing.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
+/*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 13:55:33 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2023/03/21 18:56:09 by lsohler@stu      ###   ########.fr       */
+/*   Updated: 2023/04/28 17:21:31 by lsohler          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -63,12 +63,13 @@ px_list	*pipex_lstnew(int ac, char **av, int i, char **envp)
 	px_list *list;
 
 	list = (px_list *)malloc(sizeof (*list));
-	printf("malloc test\n");
+	//printf("malloc test\n");
 	if (!list )
 		return (NULL);
 	list->cmd = ft_split(av[i], ' ');
 	list->path = pipex_path(list->cmd[0], envp);
 	list->next = NULL;
+	list->prev = NULL;
 	return (list);
 }
 
@@ -84,6 +85,7 @@ px_list	*pipex_parse(int ac, char **av, char **envp)
 	while (++i < ac - 1)
 	{
 		pipex_list->next = pipex_lstnew(ac, av, i, envp);
+		pipex_list->next->prev = pipex_list;
 		pipex_list->child_n = i -2;
 		pipex_list = pipex_list->next;
 	}
@@ -91,13 +93,15 @@ px_list	*pipex_parse(int ac, char **av, char **envp)
 	return (top);
 }
 
-int		open_files(int ac, char **av, f_list files)
+int		open_files(int ac, char **av, f_list **files)
 {
-	if (access(av[1], F_OK))
-		return (error_msg("Invalid infile\n"));
-	files.infile = open(av[1], O_RDONLY);
-	files.outfile = open(av[ac - 1], O_CREAT | O_WRONLY);
-	if (files.infile < 0 || files.outfile < 0)
-		return (error_msg("Open error\n"));
+	*files = malloc(sizeof (f_list));
+	if (access(av[1], F_OK) || !files)
+		exit (error_msg("Invalid infile\n"));
+	(*files)->infile = open(av[1], O_RDONLY);
+	(*files)->outfile = open(av[ac - 1], O_CREAT | O_RDWR | O_TRUNC);
+	//printf("infile: %i\noutfile: %i\n", (*files)->infile, (*files)->outfile);
+	if ((*files)->infile < 0 || (*files)->outfile < 0)
+		exit (error_msg("Open error\n"));
 	return (1);
 }

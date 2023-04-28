@@ -7,7 +7,7 @@ HEADER_SRCS = pipex.h
 HEADER = $(addprefix $(INCLUDES), $(HEADER_SRCS))
 
 # SOURCES #
-SRCS = main.c parsing.c free.c error.c
+SRCS = main.c parsing.c free.c error.c child.c
 LIBFT_DIR = libft/
 LIBFT_FUNC = ft_split.c ft_strdup.c ft_strjoin.c ft_strncmp.c
 LIBFT_SRCS = $(addprefix $(LIBFT_DIR), $(LIBFT_FUNC))
