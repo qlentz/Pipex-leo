@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   child.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler <lsohler@student.42.fr>            +#+  +:+       +#+        */
+/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/21 12:59:21 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2023/05/04 15:08:36 by lsohler          ###   ########.fr       */
+/*   Updated: 2023/05/04 15:45:38 by lsohler@stu      ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,13 +31,12 @@ void	pipex_child(px_list **child, f_list **file, char **envp)
 	{
 		//printf("testlast\n");
 		dup2((*child)->prev->fd[0], 0);
-		//dup2((*file)->outfile, 1);
+		dup2((*file)->outfile, 1);
 	}
 	else
 	{
 		dup2((*child)->prev->fd[0], 0);
-		//dup2((*child)->fd[1], 1);
-		dup2((*file)->outfile, 1);
+		dup2((*child)->fd[1], 1);
 	}
 	execve((*child)->path, (*child)->cmd, envp);
 	/*file->pid = fork();
