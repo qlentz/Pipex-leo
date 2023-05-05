@@ -3,77 +3,111 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: lsohler@student.42.fr <lsohler>            +#+  +:+       +#+        */
+/*   By: qlentz <qlentz@student.42lausanne.ch>      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/01/26 14:50:20 by lsohler@stu       #+#    #+#             */
-/*   Updated: 2023/05/04 15:43:04 by lsohler@stu      ###   ########.fr       */
+/*   Updated: 2023/05/05 17:07:57 by qlentz           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
 
-void pipex_print_struct (px_list *pipex_list)
+void execute_commands(px_list *commands, f_list *files, char **envp)
 {
-	size_t	i;
+    int pipefd[2];
+    int status;
+    int prev_pipe_in = -1;
+    pid_t wpid;
+    px_list *current = commands;
 
-	i = 0;
-	while (pipex_list != NULL)
-	{
-		printf("FD[0] = %i FD[1] = %i\n", pipex_list->fd[0], pipex_list->fd[1]);
-		printf("path: %s\nchild_n: %i\ncmd:\n", pipex_list->path, pipex_list->child_n);
-		while (pipex_list->cmd[i] != NULL)
-		{
-			printf("%s\n", pipex_list->cmd[i]);
-			i++;
-		}
-		pipex_list = pipex_list->next;
-		i = 0;
-	}
+    while (current)
+    {
+        if (current->next)
+        {
+            if (pipe(pipefd) < 0)
+            {
+                perror("pipe");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        current->pid = fork();
+        if (current->pid < 0)
+        {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+
+        if (current->pid == 0) // Child process
+        {
+            if (current->prev == NULL) // First command
+            {
+                dup2(files->infile, STDIN_FILENO);
+            }
+            else
+            {
+                dup2(prev_pipe_in, STDIN_FILENO);
+                close(prev_pipe_in);
+            }
+
+            if (current->next) // Not the last command
+            {
+                dup2(pipefd[1], STDOUT_FILENO);
+                close(pipefd[0]);
+            }
+            else
+            {
+                dup2(files->outfile, STDOUT_FILENO);
+            }
+
+            if (execve(current->path, current->cmd, envp) < 0)
+            {
+                perror("execve");
+                exit(EXIT_FAILURE);
+            }
+        }
+        else // Parent process
+        {
+            if (prev_pipe_in != -1)
+            {
+                close(prev_pipe_in);
+            }
+
+            if (current->next) // Not the last command
+            {
+                prev_pipe_in = pipefd[0];
+                close(pipefd[1]);
+            }
+        }
+
+        current = current->next;
+    }
+
+    if (prev_pipe_in != -1)
+    {
+        close(prev_pipe_in);
+    }
+
+    while ((wpid = wait(&status)) > 0); // Wait for all child processes to finish
 }
 
-int	create_pipe(px_list **list)
+int main(int argc, char **argv, char **envp)
 {
-	px_list	*tmp;
+    if (argc < 5)
+    {
+        fprintf(stderr, "Usage: %s file1 cmd1 cmd2 ... cmdn file2\n", argv[0]);
+        return 1;
+    }
 
-	tmp = *list;
-	while (tmp)
-	{
-		pipe(tmp->fd);
-		tmp = tmp->next;
-	}
-	return (1);
-}
+    f_list *files = open_files(argc, argv);
+    px_list *commands = pipex_parse(argc, argv, envp);
 
-int	main(int ac, char **av, char **envp)
-{
-	px_list	*pipex_list;
-	px_list	*tmp;
-	f_list	*files;
-	
-	/*if (ac < 5)
-		exiterror("Arguments count error\n");*/
-	pipex_list = pipex_parse(ac, av, envp);
-	create_pipe(&pipex_list);
-	tmp = pipex_list;
-	//pipex_print_struct(tmp);
-	files = open_files(ac, av);
-	if (files->open == 1)
-	{
-		//printf("infile: %i\noutfile: %i\n", files->infile, files->outfile);
-		while (pipex_list)
-		{
-			//printf("Test while\n");
-			//printf("FD_IN: %i FD_OUT: %i\n", pipex_list->fd[0], pipex_list->fd[1]);
-			files->pid = fork();
-			if (files->pid == 0)
-				pipex_child(&pipex_list, &files, envp);
-			pipex_list = pipex_list->next;
-			//printf("Test while 2\n");
-		}
-	}
-	//waitpid(-1, NULL, 0);
-	//write(1, "Fin\n", 4);
+    execute_commands(commands, files, envp);
 
-	free_pipex_struct(&pipex_list);
-	return (0);
+    free_pipex_struct(&commands);
+    close(files->infile);
+    close(files->outfile);
+    free(files);
+
+    return 0;
 }
